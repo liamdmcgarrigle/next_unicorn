@@ -1,5 +1,3 @@
-# Contributing Guidelines
-
 This document outlines strict rules and patterns that must be followed for all code contributions.
 
 # Svelte 5 Syntax
@@ -62,9 +60,11 @@ This document outlines strict rules and patterns that must be followed for all c
 - ✅ **MUST** return cleanup functions for subscriptions/timers
 - ✅ **MUST** use `untrack()` for untracked dependencies
 - ✅ **MUST** handle errors appropriately
+- ✅ **MUST** wrap async operations in an IIFE since $effect cannot be async
 - ❌ **NEVER** rely on effects for SSR (they don't run server-side)
 - ❌ **NEVER** unconditionally modify tracked state (causes infinite loops)
 - ❌ **NEVER** use for computing derived values
+- ❌ **NEVER** use async functions directly with $effect
 
 ```svelte
 <!-- ✅ CORRECT -->
@@ -82,12 +82,25 @@ This document outlines strict rules and patterns that must be followed for all c
     
     return () => clearInterval(timer); // Cleanup
   });
+  
+  // Async operations in $effect
+  $effect(() => {
+    (async () => {
+      const data = await fetchData();
+      // handle data
+    })();
+  });
 </script>
 
 <!-- ❌ INCORRECT -->
 <script>
   $effect(() => {
     count = count + 1; // Infinite loop!
+  });
+  
+  // Cannot use async directly
+  $effect(async () => { // ❌ Error!
+    await fetchData();
   });
 </script>
 ```
@@ -162,7 +175,8 @@ This document outlines strict rules and patterns that must be followed for all c
 - ✅ **MUST** use `.svelte.js/.svelte.ts` files for shared reactive state
 - ✅ **MUST** encapsulate state with getter/setter patterns
 - ✅ **MUST** use classes with `$state` for complex state
-- ❌ **NEVER** mix stores and runes in the same project
+- ✅ **MUST** use `fromStore()` and `toStore()` utilities when interoperating with legacy store code
+- ❌ **AVOID** mixing stores and runes in new code - prefer runes for consistency
 - ❌ **NEVER** export raw `$state` variables
 
 ```js
@@ -177,14 +191,23 @@ export function createCounter() {
   };
 }
 
+// ✅ CORRECT - Interoperating with store-based libraries
+import { fromStore, toStore } from 'svelte/store';
+import { someLibraryStore } from 'third-party-lib';
+
+// Convert store to rune-compatible state
+let storeValue = fromStore(someLibraryStore);
+
 // ❌ INCORRECT
 export let count = $state(0); // Exporting raw state
 ```
 
 ## Component Lifecycle
-- ✅ **MUST** use `$effect` for lifecycle logic
-- ✅ **MUST** use `onMount` from 'svelte' when needed
+- ✅ **MUST** use `$effect` for reactive lifecycle logic that responds to state changes
+- ✅ **MUST** use `onMount` for one-time client-side initialization (e.g., setting up third-party libraries, initial data fetching)
+- ✅ **MUST** include cleanup functions in `$effect` if setting up subscriptions, timers, or event listeners
 - ❌ **NEVER** use `beforeUpdate`/`afterUpdate` in runes mode
+- ❌ **NEVER** use async functions directly in `$effect` (wrap in IIFE if needed)
 - ❌ **NEVER** rely on effect order for initialization
 
 ## Props Validation
@@ -192,6 +215,37 @@ export let count = $state(0); // Exporting raw state
 - ✅ **MUST** handle edge cases (null, undefined, empty arrays)
 - ✅ **MUST** provide meaningful error messages
 - ❌ **NEVER** assume props are always valid
+
+## Lifecycle Patterns Example
+
+```svelte
+<script>
+  import { onMount } from 'svelte';
+  
+  // Use onMount for one-time initialization
+  onMount(async () => {
+    // Can be async
+    const data = await fetchInitialData();
+    // Initialize third-party library
+    initializeChart(chartElement);
+    
+    return () => {
+      // Cleanup on unmount
+      destroyChart();
+    };
+  });
+  
+  // Use $effect for reactive updates
+  let chartData = $state([]);
+  
+  $effect(() => {
+    // Runs when chartData changes
+    if (chartElement && chartData.length > 0) {
+      updateChart(chartElement, chartData);
+    }
+  });
+</script>
+```
 
 # Performance
 
@@ -235,11 +289,13 @@ export let count = $state(0); // Exporting raw state
 - ❌ **NEVER** forget cleanup functions in effects
 - ❌ **NEVER** create circular dependencies
 - ❌ **NEVER** mutate state without `$state`
-- ❌ **NEVER** use native Set/Map instead of SvelteSet/SvelteMap
+- ❌ **NEVER** use native Set/Map instead of SvelteSet/SvelteMap for reactive collections
 
 ```svelte
 <!-- ❌ INCORRECT - Common mistakes -->
 <script>
+  import { SvelteSet, SvelteMap } from 'svelte/reactivity';
+  
   // Using effect for derived state
   let doubled = $state(0);
   $effect(() => {
@@ -251,8 +307,13 @@ export let count = $state(0); // Exporting raw state
     const timer = setInterval(...); // No cleanup!
   });
   
-  // Using native collections
-  let items = $state(new Set()); // Should use SvelteSet
+  // Using native collections (not reactive!)
+  let items = $state(new Set()); // ❌ Should use SvelteSet
+  let data = $state(new Map()); // ❌ Should use SvelteMap
+  
+  // ✅ CORRECT
+  let items = $state(new SvelteSet());
+  let data = $state(new SvelteMap());
 </script>
 ```
 
@@ -378,6 +439,24 @@ app.$destroy();
 - ❌ **NEVER** use createEventDispatcher in Svelte 5
 - ❌ **NEVER** use event modifiers
 
+## Store to Rune Migration
+- ✅ **MUST** use `fromStore()` to convert stores to rune-compatible state
+- ✅ **MUST** use `toStore()` to convert runes to stores when needed for compatibility
+- ✅ **MUST** migrate bottom-up (leaf components first)
+- ✅ **PREFER** runes for new code, stores only for compatibility
+
+```js
+import { fromStore, toStore } from 'svelte/store';
+import { myLegacyStore } from './stores';
+
+// Convert store to rune
+let storeValue = fromStore(myLegacyStore);
+
+// Convert rune to store (for compatibility)
+let count = $state(0);
+let countStore = toStore(() => count, (v) => count = v);
+```
+
 ## Slots to Snippets
 - ✅ **MUST** convert `<slot>` to snippets
 - ✅ **MUST** convert slot props to snippet parameters
@@ -449,7 +528,7 @@ interface AsyncFunction { // Should use type for functions
 - ✅ **MUST** provide generic constraints when applicable
 - ✅ **MUST** use default generic types where sensible
 - ❌ **NEVER** use single letters for complex generic relationships
-- ❌ **NEVER** create overly complex generic types (max 3 parameters)
+- ❌ **AVOID** overly complex generic types - if more than a few parameters are needed, consider refactoring
 
 ```typescript
 // ✅ CORRECT
@@ -464,7 +543,7 @@ function updateRecord<T extends { id: string }>(record: T): T {
 }
 
 // ❌ INCORRECT
-interface Response<T, U, V, W, X> { // Too many generics
+interface Response<T, U, V, W, X> { // Too complex - consider refactoring
   data: T;
   meta: U;
   error: V;
@@ -1012,12 +1091,12 @@ interface Props<T> {
   renderItem: Snippet<[T]>;
 }
 
-// 5. Two-way binding types
+// 5. Two-way binding - use $bindable() in destructuring
 interface Props {
-  // Must use $bindable for two-way binding
-  value: string;  // ❌ Not bindable
-  count: ReturnType<typeof $bindable<number>>;  // ✅ Bindable
+  value: string;  // Regular prop
+  count: number;  // Will be made bindable in destructuring
 }
+let { value, count = $bindable() }: Props = $props();
 ```
 
 ### Module Resolution Issues
