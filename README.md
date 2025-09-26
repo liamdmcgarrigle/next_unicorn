@@ -1,38 +1,27 @@
-# sv
+# 🦄 next_unicorn
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Welcome to **next_unicorn** — the *most disruptive, paradigm-shifting, pree-seed, pre-code, pre-vision* project that nobody asked for is here.  
 
-## Creating a project
+This repo exists for one noble purpose: **to test an n8n GitHub PR bot**. But let’s be real: if we play our cards right, this could totally be a $1B exit. 🚀  
 
-If you're seeing this, you've probably already done this step. Congrats!
+---
 
-```sh
-# create a new project in the current directory
-npx sv create
+## ✨ Vision Statement
 
-# create a new project in my-app
-npx sv create my-app
-```
+*"What if… instead of building something useful, we just pretended we did?"*  
 
-## Developing
+next_unicorn is not just another demo project. It’s a **revolutionary non-product** that demonstrates PR workflows while simultaneously winking at venture capitalists. Think of it as a **case study in raising money without having an actual idea**.  
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+---
 
-```sh
-npm run dev
+## 🛠️ Tech Stack
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+- **Svelte**: because React is too mainstream.  
+- **Typescript**: all any types. Type error? just cast it - that's right, we're lean
+- **Hope & Hype**: the most scalable technology stack of all.  
 
-## Building
+---
 
-To create a production version of your app:
+## 🚀 Getting Started
 
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+well actually, not anything to do 🤷‍♂️
