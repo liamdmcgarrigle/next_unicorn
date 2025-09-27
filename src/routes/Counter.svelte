@@ -10,7 +10,7 @@
 	}
 
 	// Generate buzzwords for extra credibility
-	const metrics = ['Active Users', 'ARR Multiple', 'Burn Rate', 'TAM Size', 'Unicorns Generated'];
+  const metrics: readonly string[] = ['Active Users', 'ARR Multiple', 'Burn Rate', 'TAM Size', 'Unicorns Generated'] as const;
 	let currentMetric = $state(0);
 	
 	function nextMetric() {
